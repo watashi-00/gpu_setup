@@ -2,7 +2,7 @@
 
 source "$(dirname "$0")/src/generic_use/menu.sh"
 source "$(dirname "$0")/src/generic_use/secure_boot.sh"
-
+source "$(dirname "$0")/src/generic_use/colors.sh"
 
 #test function
 function test_func() {

@@ -1,5 +1,7 @@
 #!/bin/bash
 
+source "$(dirname "$0")/src/global_interface.sh"
+
 # Main loop
 while true; do
     echo -e "=============="
@@ -11,7 +13,9 @@ while true; do
     read -r -p "Choose an option: " OPT
     case $OPT in
         1)
+
             echo -e "${OPT}"
+            test_func
             ;;
         2)
             echo -e "${OPT}"

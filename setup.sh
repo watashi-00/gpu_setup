@@ -4,28 +4,22 @@ source "$(dirname "$0")/src/global_interface.sh"
 
 # Main loop
 while true; do
-    echo -e "=============="
-    echo -e "GPU Setup Menu"
-    echo -e "=============="
-    echo -e "1) Install or Update GPU Drivers"
-    echo -e "2) System Status"
-    echo -e "0) Exit"
-    read -r -p "Choose an option: " OPT
-    case $OPT in
-        1)
-
-            echo -e "${OPT}"
-            test_func
-            ;;
-        2)
-            echo -e "${OPT}"
-            ;;
-        0)
-            echo -e "Exiting..."
-            exit 0
-            ;;
-        *)
-            echo -e "Invalid option. Please try again."
-            ;;
-    esac
+    echo "=============="
+    echo "GPU Setup Menu"
+    echo "=============="
+    
+    for key in "${MENU_ORDER[@]}"; do
+        echo "$key) ${MENU_LABELS[$key]}"
+    done
+    
+    read -p "Select an option: " choice
+    
+    if [[ -n "${MENU_ACTIONS[$choice]}" ]]; then
+        ${MENU_ACTIONS[$choice]}
+        [["$choice" == "0"]] && exit 0
+    else
+        echo "Invalid option. Please try again."
+    fi
+    
+    echo ""
 done

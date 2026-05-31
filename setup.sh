@@ -1,65 +1,50 @@
 #!/bin/bash
 
-source "$(dirname "$0")/src/global_interface.sh"
-source "$(dirname "$0")/src/generic_use/colors.sh"
+BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Main loop
+source "$BASE_DIR/src/global_interface.sh"
+source "$BASE_DIR/src/generic_use/colors.sh"
+source "$BASE_DIR/src/generic_use/menu.sh"
 
-tput civis
-trap "tput cnorm" EXIT
+exit_program() {
+    if [ -t 1 ]; then
+        clear
+    fi
+    printf 'Exiting...\n'
+    exit 0
+}
 
+declare -A MAIN_MENU_LABELS=(
+    [drivers]="Install or Update GPU Drivers"
+    [status]="System Status"
+    [configs]="Configs"
+    [exit]="Exit"
+)
 
-MENU_SIZE=${#MENU_ORDER[@]}
-SELECTED=1
+declare -A MAIN_MENU_ACTIONS=(
+    [drivers]="install_or_update_drivers"
+    [status]="show_system_status"
+    [configs]="configure_settings"
+    [exit]="exit_program"
+)
 
-while true; do
-    echo "=============="
-    echo "GPU Setup Menu"
-    echo "=============="
+MAIN_MENU_ORDER=(drivers status configs exit)
 
-    for i in "${MENU_ORDER[@]}"; do
-        if [ "$i" -eq "$SELECTED" ]; then
-            echo -e "${CYAN}> ${MENU_LABELS[$i]}${NC}"
-        else
-            echo "  ${MENU_LABELS[$i]}"
-        fi
-    done
+declare -A CONFIG_MENU_LABELS=(
+    [secure_boot]="Secure Boot Status"
+    [back]="Back"
+)
 
-    echo "Use [ARROW KEYS] to navigate, [ENTER] to select, [Q] to quit."
-    read -rsn1 input
+declare -A CONFIG_MENU_ACTIONS=(
+    [secure_boot]="show_secure_boot_status"
+    [back]="menu_back"
+)
 
-    case "$input" in
-        $'\x1b') # ESC sequence (arrow keys)
-            read -rsn2 -t 0.1 input
-            if [[ "$input" == "[A" ]]; then # Up arrow
-                ((SELECTED--))
-                if [ "$SELECTED" -lt 0 ]; then
-                    SELECTED=$((MENU_SIZE - 1))
-                fi
-            elif [[ "$input" == "[B" ]]; then # Down arrow
-                ((SELECTED++))
-                if [ "$SELECTED" -ge "$MENU_SIZE" ]; then
-                    SELECTED=0
-                fi
-            fi
-            ;;
-        "") # Enter key
-            ACTION="${MENU_ACTIONS[$SELECTED]}"
-            if [ -n "$ACTION" ] && declare -f "$ACTION" > /dev/null; then
-                clear
-                $ACTION
-                echo "Press any key to return to the menu..."
-                read -rsn1
-            else
-                echo "Invalid selection: No action defined for this option."
-                sleep 1.5
-            fi
-            ;;
-        [Qq]) # Quit
-            echo "Exiting..."
-            break
-            ;;
-    esac
-    clear
+CONFIG_MENU_ORDER=(secure_boot back)
 
-done
+if [ -t 1 ]; then
+    tput civis
+    trap "tput cnorm" EXIT
+fi
+
+menu "GPU Setup Menu" MAIN_MENU_LABELS MAIN_MENU_ACTIONS MAIN_MENU_ORDER

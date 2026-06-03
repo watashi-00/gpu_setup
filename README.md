@@ -6,6 +6,7 @@ A modular, interactive command-line utility for Linux designed to simplify GPU d
 
 *   **Interactive Menu System:** Navigate easily using arrow keys in a clean, modern TUI (Text User Interface).
 *   **Smart Hardware Detection:** Automatically detects your connected GPUs (NVIDIA, AMD, Intel) and monitors via `lspci` and DRM sysfs.
+*   **Automated Safety Rollback:** Features a 60-second "alive" prompt after driver installation. If your screen goes black or freezes, the script will automatically uninstall the packages to restore your system.
 *   **Cross-Distribution Support:** Automatically adapts package managers and driver names for major Linux families.
 *   **Secure Boot Awareness:** Warns users if Secure Boot is enabled before installing unsigned kernel modules (like NVIDIA DKMS).
 *   **KDE Plasma Wayland Affinity:** Easily configure `KWIN_DRM_DEVICES` for multi-GPU setups (e.g., force KWin to use the integrated GPU while saving the dGPU for gaming).

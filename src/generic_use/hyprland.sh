@@ -7,8 +7,8 @@ reload_hyprland() {
         return 1
     fi
 
-    fecho "INFO" "Waiting 10 seconds before reloading Hyprland..."
-    sleep 10
+    fecho "INFO" "Waiting 5 seconds before reloading Hyprland..."
+    sleep 5
 
     if hyprctl reload; then
         fecho "INFO" "Hyprland reloaded successfully."

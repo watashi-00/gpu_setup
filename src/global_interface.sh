@@ -6,6 +6,8 @@ source "$(dirname "$0")/src/generic_use/colors.sh"
 source "$(dirname "$0")/src/generic_use/functions.sh"
 source "$(dirname "$0")/src/generic_use/monitors.sh"
 source "$(dirname "$0")/src/nvidia/nvidia_interface.sh"
+source "$(dirname "$0")/src/amd/amd_interface.sh"
+source "$(dirname "$0")/src/intel/intel_interface.sh"
 source "$(dirname "$0")/src/generic_use/hyprland.sh"
 
 OS_ID="unknown"
@@ -213,4 +215,77 @@ show_system_status() {
 
             menu "DRM Affinity Configuration" DRM_LABELS DRM_ACTIONS DRM_ORDER
         fi
+    }
+
+    install_drivers() {
+        clear
+        printf '%b=== GPU Driver Installation ===%b\n' "${CYAN:-}" "${NC:-}"
+
+        if [ "$SECURE_BOOT" = "enabled" ]; then
+            fecho "WARN" "Secure Boot is ENABLED! NVIDIA modules might not load if not signed."
+            read -r -p "Do you want to continue? (y/n): " sb_conf
+            [[ ! "$sb_conf" =~ ^[Yy]$ ]] && return
+        fi
+
+        if ! command -v lspci &> /dev/null; then
+            fecho "INFO" "Installing pciutils (lspci)..."
+            "${PKG_UPDATE_CMD[@]}" || true
+            if ! "${PKG_INSTALL_CMD[@]}" pciutils; then
+                fecho "ERRO" "Failed to install pciutils."
+                return 1
+            fi
+        fi
+
+        mapfile -t gpus < <(LC_ALL=C lspci -nn | grep -E 'VGA|3D|Display')
+        if [ ${#gpus[@]} -eq 0 ]; then
+            fecho "ERRO" "No GPU detected."
+            return 1
+        fi
+
+        declare -A GPU_LABELS
+        declare -A GPU_ACTIONS
+        local GPU_ORDER=()
+
+        for i in "${!gpus[@]}"; do
+            local gpu="${gpus[$i]}"
+            local key="gpu_$i"
+            GPU_LABELS[$key]="$gpu"
+
+            if echo "$gpu" | grep -Eiq 'NVIDIA'; then
+                GPU_ACTIONS[$key]="nvidia_install"
+            elif echo "$gpu" | grep -Eiq 'AMD|Radeon|Advanced Micro Devices'; then
+                GPU_ACTIONS[$key]="amd_install"
+            elif echo "$gpu" | grep -Eiq 'Intel'; then
+                GPU_ACTIONS[$key]="intel_install"
+            else
+                GPU_ACTIONS[$key]=""
+            fi
+            GPU_ORDER+=("$key")
+        done
+        GPU_LABELS[back]="Back"
+        GPU_ACTIONS[back]="menu_back"
+        GPU_ORDER+=("back")
+
+        menu "Select GPU to install drivers" GPU_LABELS GPU_ACTIONS GPU_ORDER
+    }
+
+    global_main_menu() {
+    get_system_status
+    get_gpus_info
+
+    declare -A MAIN_LABELS=(
+        [drivers]="Install/Update GPU Drivers"
+        [status]="Show System Status"
+        [config]="Affinity and Performance Configuration"
+        [exit]="Exit"
+    )
+    declare -A MAIN_ACTIONS=(
+        [drivers]="install_drivers"
+        [status]="show_system_status"
+        [config]="configure_settings"
+        [exit]="exit"
+    )
+    local MAIN_ORDER=(drivers status config exit)
+
+    menu "GPU Setup Manager" MAIN_LABELS MAIN_ACTIONS MAIN_ORDER
     }

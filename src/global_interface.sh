@@ -22,6 +22,19 @@ AMD_CARD=""
 declare -a PKG_UPDATE_CMD
 declare -a PKG_INSTALL_CMD
 
+function _print_banner() {
+    printf '%b' "${PRIMARY:-}"
+    cat << "EOF"
+  ____ ____  _   _   ____  _____ _____ _   _ ____  
+ / ___|  _ \| | | | / ___|| ____|_   _| | | |  _ \ 
+| |  _| |_) | | | | \___ \|  _|   | | | | | | |_) |
+| |_| |  __/| |_| |  ___) | |___  | | | |_| |  __/ 
+ \____|_|    \___/  |____/|_____| |_|  \___/|_|    
+                                                   
+EOF
+    printf '%b' "${NC:-}"
+}
+
 function get_system_status() {
     fecho "INFO" "Detecting operating system..."
 
@@ -79,38 +92,58 @@ function get_gpus_info() {
     fi
 }
 
+_print_status_row() {
+    local key="$1"
+    local value="$2"
+    printf "  %b%-20s%b %s\n" "${BOLD:-}" "$key" "${NC:-}" "$value"
+}
+
 show_system_status() {
     clear
-    printf '%b=== System and GPU Status ===%b\n' "${CYAN:-}" "${NC:-}"
-    printf '%bKernel:%b %s\n' "${GREEN:-}" "${NC:-}" "$(uname -r)"
-    printf '%bOS:%b %s | %bFamily:%b %s\n' "${GREEN:-}" "${NC:-}" "$OS_ID" "${GREEN:-}" "${NC:-}" "$FAMILY"
-    printf '%bSession:%b %s | %bDesktop:%b %s\n' "${GREEN:-}" "${NC:-}" "${XDG_SESSION_TYPE:-unknown}" "${GREEN:-}" "${NC:-}" "${XDG_CURRENT_DESKTOP:-unknown}"
-    printf '%bSecure Boot:%b %s\n' "${GREEN:-}" "${NC:-}" "$SECURE_BOOT"
+    printf '%b' "${PRIMARY:-}"
+    frule "━" "${PRIMARY:-}"
+    printf '  %bSYSTEM AND GPU STATUS%b\n' "${BOLD:-}" "${NC:-}"
+    frule "━" "${PRIMARY:-}"
     printf '\n'
 
-    printf '%bDetected Hardware (lspci):%b\n' "${YELLOW:-}" "${NC:-}"
-    LC_ALL=C lspci -nn | grep -E 'VGA|3D|Display' || echo "No GPU detected."
+    printf '%bGeneral Information%b\n' "${BOLD:-}" "${NC:-}"
+    frule "─" "${DIM:-}"
+    _print_status_row "Kernel" "$(uname -r)"
+    _print_status_row "OS ID" "$OS_ID"
+    _print_status_row "OS Family" "$FAMILY"
+    _print_status_row "Session Type" "${XDG_SESSION_TYPE:-unknown}"
+    _print_status_row "Desktop Env" "${XDG_CURRENT_DESKTOP:-unknown}"
+    _print_status_row "Secure Boot" "$SECURE_BOOT"
+    printf '\n'
+
+    printf '%bHardware Detection (lspci)%b\n' "${BOLD:-}" "${NC:-}"
+    frule "─" "${DIM:-}"
+    LC_ALL=C lspci -nn | grep -E 'VGA|3D|Display' | sed 's/^/  /' || echo "  No GPU detected."
     printf '\n'
 
     if command -v nvidia-smi &>/dev/null; then
-        printf '%bNVIDIA Monitoring:%b\n' "${GREEN:-}" "${NC:-}"
-        nvidia-smi --query-gpu=name,driver_version,memory.used,utilization.gpu --format=csv,noheader || echo "Failed to query nvidia-smi"
+        printf '%bNVIDIA Monitoring%b\n' "${BOLD:-}" "${NC:-}"
+        frule "─" "${DIM:-}"
+        nvidia-smi --query-gpu=name,driver_version,memory.used,utilization.gpu --format=csv,noheader | sed 's/^/  /' || echo "  Failed to query nvidia-smi"
     else
-        printf '%bNVIDIA drivers not loaded or not installed.%b\n' "${RED:-}" "${NC:-}"
+        fecho "INFO" "NVIDIA drivers not loaded or not installed."
     fi
     printf '\n'
 
-    printf '%bEnvironment Variables (/etc/environment):%b\n' "${YELLOW:-}" "${NC:-}"
+    printf '%bEnvironment Variables%b\n' "${BOLD:-}" "${NC:-}"
+    frule "─" "${DIM:-}"
     if [ -f /etc/environment ]; then
-        grep -E "KWIN_DRM|__NV_PRIME|__GLX_VENDOR|__VK_LAYER" /etc/environment || echo "None."
+        grep -E "KWIN_DRM|__NV_PRIME|__GLX_VENDOR|__VK_LAYER" /etc/environment | sed 's/^/  /' || echo "  None configured."
     else
-        echo "/etc/environment file does not exist."
+        echo "  /etc/environment file does not exist."
     fi
     printf '\n'
 
-    printf '%bConnected monitors and announced modes:%b\n' "${YELLOW:-}" "${NC:-}"
+    printf '%bConnected Monitors%b\n' "${BOLD:-}" "${NC:-}"
+    frule "─" "${DIM:-}"
     show_connected_monitors
     printf '\n'
+    frule "━" "${PRIMARY:-}"
 }
 
 # Update a specific variable in /etc/environment.
@@ -131,10 +164,22 @@ update_environment_variable() {
 }
 
 # Helper actions for configure_settings
-_hypr_apply_both() {
+_hypr_action_refresh() {
+    configure_hyprland_high_refresh
+    reload_hyprland || true
+}
+
+_hypr_action_offload() {
+    cleanup_global_nvidia_offload_env
+    fecho "SUCCESS" "NVIDIA offload variables removed from /etc/environment."
+    reload_hyprland || true
+}
+
+_hypr_action_both() {
     configure_hyprland_high_refresh
     cleanup_global_nvidia_offload_env
-    fecho "INFO" "Settings applied."
+    fecho "SUCCESS" "Settings applied successfully."
+    reload_hyprland || true
 }
 
 _action_drm_nvidia_primary() {
@@ -145,7 +190,7 @@ _action_drm_nvidia_primary() {
     local fallback="${INTEL_CARD:-$AMD_CARD}"
     local new_dev="$NVIDIA_CARD${fallback:+:$fallback}"
     update_environment_variable "KWIN_DRM_DEVICES" "$new_dev"
-    fecho "INFO" "Configured! NVIDIA prioritized."
+    fecho "SUCCESS" "Configured! NVIDIA prioritized."
     fecho "WARN" "You must restart your session to apply changes."
 }
 
@@ -161,7 +206,7 @@ _action_drm_hybrid() {
     fi
     local new_dev="$primary:$NVIDIA_CARD"
     update_environment_variable "KWIN_DRM_DEVICES" "$new_dev"
-    fecho "INFO" "Configured! Integrated prioritized."
+    fecho "SUCCESS" "Configured! Integrated prioritized."
     fecho "WARN" "You must restart your session to apply changes."
 }
 
@@ -172,13 +217,13 @@ _action_drm_integrated() {
         return 1
     fi
     update_environment_variable "KWIN_DRM_DEVICES" "$primary"
-    fecho "INFO" "Configured! Only integrated GPU will be used by KWin."
+    fecho "SUCCESS" "Configured! Only integrated GPU will be used by KWin."
     fecho "WARN" "You must restart your session to apply changes."
 }
 
 _action_drm_default() {
     update_environment_variable "KWIN_DRM_DEVICES" ""
-    fecho "INFO" "Rule removed. System will decide."
+    fecho "SUCCESS" "Rule removed. System will decide."
     fecho "WARN" "You must restart your session to apply changes."
 }
 
@@ -193,20 +238,19 @@ configure_settings() {
             [back]="Back"
         )
         declare -A HYPR_ACTIONS=(
-            [refresh]="configure_hyprland_high_refresh"
-            [offload]="cleanup_global_nvidia_offload_env"
-            [both]="_hypr_apply_both"
+            [refresh]="_hypr_action_refresh"
+            [offload]="_hypr_action_offload"
+            [both]="_hypr_action_both"
             [back]="menu_back"
         )
         local HYPR_ORDER=(refresh offload both back)
 
         menu "Hyprland Configuration" HYPR_LABELS HYPR_ACTIONS HYPR_ORDER
-        reload_hyprland || true
     else
         if [[ "${XDG_CURRENT_DESKTOP:-}" != *"KDE"* ]] || [[ "${XDG_SESSION_TYPE:-}" != "wayland" ]]; then
             fecho "WARN" "KWIN_DRM_DEVICES configuration is specific to KDE Plasma on Wayland."
-            printf 'Detected environment: %s on %s.\n\n' "${XDG_CURRENT_DESKTOP:-unknown}" "${XDG_SESSION_TYPE:-unknown}"
-            printf 'Press any key to continue to DRM settings...'
+            printf '  Detected environment: %s on %s.\n\n' "${XDG_CURRENT_DESKTOP:-unknown}" "${XDG_SESSION_TYPE:-unknown}"
+            printf '  Press any key to continue to DRM settings...'
             read -rsn1
         fi
 
@@ -232,11 +276,15 @@ configure_settings() {
 
 install_drivers() {
     clear
-    printf '%b=== GPU Driver Installation ===%b\n' "${CYAN:-}" "${NC:-}"
+    printf '%b' "${PRIMARY:-}"
+    frule "━" "${PRIMARY:-}"
+    printf '  %bGPU DRIVER INSTALLATION%b\n' "${BOLD:-}" "${NC:-}"
+    frule "━" "${PRIMARY:-}"
+    printf '\n'
 
     if [ "$SECURE_BOOT" = "enabled" ]; then
         fecho "WARN" "Secure Boot is ENABLED! NVIDIA modules might not load if not signed."
-        read -r -p "Do you want to continue? (y/n): " sb_conf
+        read -r -p "  Do you want to continue? (y/n): " sb_conf
         [[ ! "$sb_conf" =~ ^[Yy]$ ]] && return
     fi
 
@@ -293,6 +341,9 @@ _action_exit() {
 global_main_menu() {
     get_system_status
     get_gpus_info
+
+    _menu_clear
+    _print_banner
 
     declare -A MAIN_LABELS=(
         [drivers]="Install/Update GPU Drivers"

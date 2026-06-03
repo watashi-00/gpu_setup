@@ -1,50 +1,37 @@
 #!/bin/bash
 
+# GPU Setup Manager - Modular Entry Point
+# This script consolidates all GPU management tasks into a single interface.
+
+set -euo pipefail
+
+# Determine base directory
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-source "$BASE_DIR/src/global_interface.sh"
-source "$BASE_DIR/src/generic_use/colors.sh"
-source "$BASE_DIR/src/generic_use/menu.sh"
-
-exit_program() {
-    if [ -t 1 ]; then
-        clear
-    fi
-    printf 'Exiting...\n'
-    exit 0
-}
-
-declare -A MAIN_MENU_LABELS=(
-    [drivers]="Install or Update GPU Drivers"
-    [status]="System Status"
-    [configs]="Configs"
-    [exit]="Exit"
-)
-
-declare -A MAIN_MENU_ACTIONS=(
-    [drivers]="install_or_update_drivers"
-    [status]="show_system_status"
-    [configs]="configure_settings"
-    [exit]="exit_program"
-)
-
-MAIN_MENU_ORDER=(drivers status configs exit)
-
-declare -A CONFIG_MENU_LABELS=(
-    [secure_boot]="Secure Boot Status"
-    [back]="Back"
-)
-
-declare -A CONFIG_MENU_ACTIONS=(
-    [secure_boot]="show_secure_boot_status"
-    [back]="menu_back"
-)
-
-CONFIG_MENU_ORDER=(secure_boot back)
-
-if [ -t 1 ]; then
-    tput civis
-    trap "tput cnorm" EXIT
+# Source the global interface which orchestrates all modules
+if [ -f "$BASE_DIR/src/global_interface.sh" ]; then
+    source "$BASE_DIR/src/global_interface.sh"
+else
+    echo "Error: Global interface not found at $BASE_DIR/src/global_interface.sh"
+    exit 1
 fi
 
-menu "GPU Setup Menu" MAIN_MENU_LABELS MAIN_MENU_ACTIONS MAIN_MENU_ORDER
+# Main execution
+main() {
+    # Check for root privileges
+    check_root
+
+    # Offer global installation if not already installed
+    install_global
+
+    # Launch the main menu
+    global_main_menu
+}
+
+# Ensure terminal state is handled cleanly
+if [ -t 1 ]; then
+    tput civis
+    trap "tput cnorm; clear" EXIT
+fi
+
+main "$@"

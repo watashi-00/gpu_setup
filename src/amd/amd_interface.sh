@@ -45,6 +45,8 @@ amd_install() {
             return 1
         fi
         
-        fecho "SUCCESS" "AMD drivers installed successfully!"
+        if verify_and_rollback "${packages[@]}"; then
+            fecho "SUCCESS" "AMD drivers installed and verified successfully!"
+        fi
     fi
 }

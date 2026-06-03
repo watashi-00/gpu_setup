@@ -97,10 +97,14 @@ nvidia_install() {
             return 1
         fi
         
+        if ! verify_and_rollback "${packages[@]}"; then
+            return 1
+        fi
+        
         # Create NVIDIA offload wrapper
         local wrapper="/usr/local/bin/run-gpu"
         printf '#!/bin/bash\nexport __NV_PRIME_RENDER_OFFLOAD=1\nexport __GLX_VENDOR_LIBRARY_NAME=nvidia\nexport __VK_LAYER_NV_optimus=NVIDIA_only\nexec "$@"\n' > "$wrapper"
         chmod +x "$wrapper"
-        fecho "SUCCESS" "Drivers and 'run-gpu' command configured!"
+        fecho "SUCCESS" "Drivers installed and 'run-gpu' wrapper configured!"
     fi
 }

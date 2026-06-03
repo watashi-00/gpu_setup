@@ -1,10 +1,10 @@
 #!/bin/bash
 
-# Formatted echo for information, warnings, and errors with modern icons.
+# Formatted echo for information, warnings, and errors.
 fecho() {
     local label="$1"
     local message="$2"
-    
+
     case "$label" in
         "INFO")
             printf '%b[ ℹ ] %b%s\n' "${INFO:-}" "${NC:-}" "$message"
@@ -30,7 +30,7 @@ frule() {
     local color="${2:-${DIM:-}}"
     local width
     width=$(tput cols 2>/dev/null || echo 60)
-    
+
     printf '%b' "$color"
     printf "%.s$char" $(seq 1 "$width")
     printf '%b\n' "${NC:-}"
@@ -63,9 +63,44 @@ install_global() {
     if [ -n "$script_path" ] && [ "$script_path" != "$global_path" ]; then
         cp "$script_path" "$global_path"
         chmod +x "$global_path"
-        fecho "INFO" "Done! You can now run 'sudo $script_name' from anywhere."
+        fecho "SUCCESS" "Done! You can now run 'sudo $script_name' from anywhere."
     else
         fecho "WARN" "Script is already installed globally or path not found."
     fi
 }
+
+# Verify display output after driver install and rollback if no response.
+verify_and_rollback() {
+    local packages=("$@")
+
+    printf '\n'
+    frule "━" "${WARNING:-}"
+    fecho "WARN" "SAFETY CHECK: Display verification"
+    fecho "WARN" "If your screen is black or frozen, do nothing. An automatic rollback will occur in 60 seconds."
+    printf '  %bPlease type "alive" and press ENTER to confirm your display is working: %b' "${BOLD:-}" "${NC:-}"
+
+    local confirm
+    if read -t 60 confirm; then
+        if [[ "${confirm,,}" == *"alive"* || "${confirm,,}" == *"ok"* ]]; then
+            fecho "SUCCESS" "Display confirmed functional. Keeping driver changes."
+            return 0
+        fi
+    fi
+
+    printf '\n\n'
+    fecho "ERRO" "No valid confirmation received or timeout reached!"
+    fecho "WARN" "Executing emergency rollback to restore previous state..."
+
+    case "$FAMILY" in
+        arch) pacman -R --noconfirm "${packages[@]}" || true ;;
+        debian) apt-get remove --purge -y "${packages[@]}" || true ;;
+        fedora) dnf remove -y "${packages[@]}" || true ;;
+        suse) zypper remove -y "${packages[@]}" || true ;;
+        *) fecho "WARN" "Automated rollback is not explicitly supported for this family." ;;
+    esac
+
+    fecho "INFO" "Emergency rollback completed."
+    return 1
+}
+
 

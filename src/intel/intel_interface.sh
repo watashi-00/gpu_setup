@@ -44,6 +44,8 @@ intel_install() {
             return 1
         fi
         
-        fecho "SUCCESS" "Intel drivers installed successfully!"
+        if verify_and_rollback "${packages[@]}"; then
+            fecho "SUCCESS" "Intel drivers installed and verified successfully!"
+        fi
     fi
 }

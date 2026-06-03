@@ -8,13 +8,18 @@ amd_install() {
     
     case "$FAMILY" in
         arch)
+            if ! grep -q "^\[multilib\]" /etc/pacman.conf; then
+                fecho "WARN" "The [multilib] repository is not enabled in /etc/pacman.conf."
+                fecho "WARN" "32-bit libraries (lib32-*) might fail to install."
+            fi
             packages=(mesa lib32-mesa vulkan-radeon lib32-vulkan-radeon xf86-video-amdgpu)
             ;;
         debian)
-            packages=(libgl1-mesa-dri xserver-xorg-video-amdgpu mesa-vulkan-drivers)
+            # firmware-amd-graphics is strictly required on Debian for AMD GPUs
+            packages=(libgl1-mesa-dri xserver-xorg-video-amdgpu mesa-vulkan-drivers firmware-amd-graphics)
             ;;
         fedora)
-            packages=(mesa-dri-drivers xorg-x11-drv-amdgpu vulkan-loader)
+            packages=(mesa-dri-drivers xorg-x11-drv-amdgpu mesa-vulkan-drivers)
             ;;
         suse)
             packages=(Mesa-libGL1 xf86-video-amdgpu)
@@ -31,7 +36,7 @@ amd_install() {
     fi
 
     fecho "INFO" "Packages to install: ${packages[*]}"
-    read -r -p "Confirm installation? (y/n): " conf
+    read -r -p "  Confirm installation? (y/n): " conf
     if [[ "$conf" =~ ^[Yy]$ ]]; then
         "${PKG_UPDATE_CMD[@]}" || fecho "WARN" "Repository update partially failed."
         
@@ -40,6 +45,6 @@ amd_install() {
             return 1
         fi
         
-        fecho "INFO" "AMD drivers installed successfully!"
+        fecho "SUCCESS" "AMD drivers installed successfully!"
     fi
 }

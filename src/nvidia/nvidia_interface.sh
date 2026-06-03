@@ -24,6 +24,10 @@ nvidia_install() {
     
     case "$FAMILY" in
         arch)
+            if ! grep -q "^\[multilib\]" /etc/pacman.conf; then
+                fecho "WARN" "The [multilib] repository is not enabled in /etc/pacman.conf."
+                fecho "WARN" "32-bit libraries (lib32-*) might fail to install."
+            fi
             local krel
             krel=$(uname -r)
             local hd="linux-headers"
@@ -60,7 +64,7 @@ nvidia_install() {
         fedora)
             if ! dnf repolist | grep -qi rpmfusion-nonfree; then
                 fecho "WARN" "RPMFusion Non-Free not detected. This is required for NVIDIA drivers on Fedora."
-                read -r -p "Do you want to install RPMFusion now? (y/n): " rpmf
+                read -r -p "  Do you want to install RPMFusion now? (y/n): " rpmf
                 if [[ "$rpmf" =~ ^[Yy]$ ]]; then
                     dnf install -y "https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm" "https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm"
                 fi
@@ -68,6 +72,8 @@ nvidia_install() {
             packages=(akmod-nvidia xorg-x11-drv-nvidia-cuda mesa-vulkan-drivers kernel-devel)
             ;;
         suse)
+            fecho "WARN" "Please ensure you have added the official NVIDIA repository for openSUSE."
+            fecho "WARN" "Example: zypper addrepo --refresh https://download.nvidia.com/opensuse/tumbleweed NVIDIA"
             packages=(nvidia-video-G06 nvidia-gl-G06)
             ;;
         *)
@@ -82,7 +88,7 @@ nvidia_install() {
     fi
 
     fecho "INFO" "Packages to install: ${packages[*]}"
-    read -r -p "Confirm installation? (y/n): " conf
+    read -r -p "  Confirm installation? (y/n): " conf
     if [[ "$conf" =~ ^[Yy]$ ]]; then
         "${PKG_UPDATE_CMD[@]}" || fecho "WARN" "Repository update partially failed."
         
@@ -95,6 +101,6 @@ nvidia_install() {
         local wrapper="/usr/local/bin/run-gpu"
         printf '#!/bin/bash\nexport __NV_PRIME_RENDER_OFFLOAD=1\nexport __GLX_VENDOR_LIBRARY_NAME=nvidia\nexport __VK_LAYER_NV_optimus=NVIDIA_only\nexec "$@"\n' > "$wrapper"
         chmod +x "$wrapper"
-        fecho "INFO" "Drivers and 'run-gpu' command configured!"
+        fecho "SUCCESS" "Drivers and 'run-gpu' command configured!"
     fi
 }

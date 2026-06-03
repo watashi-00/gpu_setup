@@ -9,10 +9,17 @@ if command -v mokutil &> /dev/null; then
         SECURE_BOOT="disabled"
     fi
 else
-    SB_FILE=$(ls /sys/firmware/efi/vars/SecureBoot-*/data 2>/dev/null | head -n 1)
+    # Use a safer way to find the file that doesn't trigger set -e
+    SB_FILE=""
+    for f in /sys/firmware/efi/vars/SecureBoot-*/data; do
+        if [ -f "$f" ]; then
+            SB_FILE="$f"
+            break
+        fi
+    done
     
-    if [ -n "$SB_FILE" ] && [ -f "$SB_FILE" ]; then
-        SECURE_BOOT_HEX=$(hexdump -v -e '1/1 "%02x"' "$SB_FILE")
+    if [ -n "$SB_FILE" ]; then
+        SECURE_BOOT_HEX=$(hexdump -v -e '1/1 "%02x"' "$SB_FILE" 2>/dev/null || echo "00")
         if [ "$SECURE_BOOT_HEX" == "01" ]; then
             SECURE_BOOT="enabled"
         else

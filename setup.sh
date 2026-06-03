@@ -21,9 +21,6 @@ main() {
     # Check for root privileges
     check_root
 
-    # Offer global installation if not already installed
-    install_global
-
     # Launch the main menu
     global_main_menu
 }
@@ -31,7 +28,7 @@ main() {
 # Ensure terminal state is handled cleanly
 if [ -t 1 ]; then
     tput civis
-    trap "tput cnorm; clear" EXIT
+    trap "tput cnorm" EXIT
 fi
 
 main "$@"

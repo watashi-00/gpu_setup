@@ -1,24 +1,39 @@
 #!/bin/bash
 
-# Formatted echo for information, warnings, and errors.
+# Formatted echo for information, warnings, and errors with modern icons.
 fecho() {
     local label="$1"
     local message="$2"
     
     case "$label" in
         "INFO")
-            printf '%b[INFO] %-15s%b %s\n' "${BLUE:-}" "" "${NC:-}" "$message"
+            printf '%b[ ℹ ] %b%s\n' "${INFO:-}" "${NC:-}" "$message"
             ;;
         "WARN")
-            printf '%b[WARN] %-15s%b %s\n' "${YELLOW:-}" "" "${NC:-}" "$message"
+            printf '%b[ ⚠ ] %b%s\n' "${WARNING:-}" "${NC:-}" "$message"
             ;;
         "ERRO")
-            printf '%b[ERRO] %-15s%b %s\n' "${RED:-}" "" "${NC:-}" "$message"
+            printf '%b[ ✖ ] %b%s\n' "${ERROR:-}" "${NC:-}" "$message"
+            ;;
+        "SUCCESS")
+            printf '%b[ ✔ ] %b%s\n' "${SUCCESS:-}" "${NC:-}" "$message"
             ;;
         *)
-            printf '[%s] %s\n' "$label" "$message"
+            printf '[ %s ] %s\n' "$label" "$message"
             ;;
     esac
+}
+
+# Print a stylish horizontal rule.
+frule() {
+    local char="${1:-─}"
+    local color="${2:-${DIM:-}}"
+    local width
+    width=$(tput cols 2>/dev/null || echo 60)
+    
+    printf '%b' "$color"
+    printf "%.s$char" $(seq 1 "$width")
+    printf '%b\n' "${NC:-}"
 }
 
 # Check if the script is running as root.

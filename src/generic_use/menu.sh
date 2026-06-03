@@ -97,16 +97,17 @@ menu() {
 
         case "$input" in
             $'\x1b')
-                read -rsn2 -t 0.1 input
+                # Use || true to prevent set -e from exiting the script on timeout
+                read -rsn2 -t 0.1 input || input=""
                 case "$input" in
                     "[A")
-                        ((selected--))
+                        selected=$((selected - 1))
                         if [ "$selected" -lt 0 ]; then
                             selected=$((${#menu_order[@]} - 1))
                         fi
                         ;;
                     "[B")
-                        ((selected++))
+                        selected=$((selected + 1))
                         if [ "$selected" -ge "${#menu_order[@]}" ]; then
                             selected=0
                         fi

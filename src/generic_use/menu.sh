@@ -33,22 +33,27 @@ _menu_render() {
     _menu_clear
 
     if [ -n "$title" ]; then
-        printf '==============\n'
-        printf '%s\n' "$title"
-        printf '==============\n\n'
+        printf '%b' "${PRIMARY:-}"
+        frule "━" "${PRIMARY:-}"
+        printf '  %b%s%b\n' "${BOLD:-}" "$title" "${NC:-}"
+        frule "━" "${PRIMARY:-}"
+        printf '\n'
     fi
 
     for index in "${!order_ref[@]}"; do
         key="${order_ref[$index]}"
 
         if [ "$index" -eq "$selected" ]; then
-            printf '%b> %s%b\n' "${CYAN:-}" "${labels_ref[$key]}" "${NC:-}"
+            printf '  %b❯ %s%b\n' "${PRIMARY:-}" "${labels_ref[$key]}" "${NC:-}"
         else
-            printf '  %s\n' "${labels_ref[$key]}"
+            printf '    %b%s%b\n' "${DIM:-}" "${labels_ref[$key]}" "${NC:-}"
         fi
     done
 
-    printf '\nUse [ARROW KEYS] to navigate, [ENTER] to select, [Q] to go back.\n'
+    printf '\n'
+    frule "─" "${DIM:-}"
+    printf '  %bNavigation:%b  [↑/↓] Move  [ENTER] Select  [Q/BACK] Return\n' "${BOLD:-}" "${NC:-}"
+    frule "─" "${DIM:-}"
 }
 
 menu() {
@@ -85,7 +90,7 @@ menu() {
     fi
 
     if [ "${#menu_order[@]}" -eq 0 ]; then
-        printf 'No menu options configured.\n'
+        fecho "WARN" "No menu options configured."
         return 1
     fi
 
@@ -119,7 +124,7 @@ menu() {
                 action="${actions_ref[$key]}"
 
                 if [ -z "$action" ] || ! declare -f "$action" > /dev/null; then
-                    printf 'Invalid selection: no action defined for "%s".\n' "${labels_ref[$key]}"
+                    fecho "ERRO" "No action defined for \"${labels_ref[$key]}\"."
                     sleep 1.5
                     continue
                 fi
@@ -136,7 +141,9 @@ menu() {
                         continue
                         ;;
                     *)
-                        printf '\nPress any key to return to the menu...'
+                        printf '\n'
+                        frule "─" "${DIM:-}"
+                        printf '  %bPress any key to return to menu...%b' "${DIM:-}" "${NC:-}"
                         read -rsn1
                         ;;
                 esac

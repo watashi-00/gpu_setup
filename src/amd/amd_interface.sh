@@ -8,11 +8,13 @@ amd_install() {
     
     case "$FAMILY" in
         arch)
-            if ! grep -q "^\[multilib\]" /etc/pacman.conf; then
-                fecho "WARN" "The [multilib] repository is not enabled in /etc/pacman.conf."
-                fecho "WARN" "32-bit libraries (lib32-*) might fail to install."
+            ensure_arch_multilib || true
+            if grep -q "^\[multilib\]" /etc/pacman.conf; then
+                packages=(mesa lib32-mesa vulkan-radeon lib32-vulkan-radeon xf86-video-amdgpu)
+            else
+                fecho "WARN" "[multilib] not enabled. Skipping 32-bit AMD libraries."
+                packages=(mesa vulkan-radeon xf86-video-amdgpu)
             fi
-            packages=(mesa lib32-mesa vulkan-radeon lib32-vulkan-radeon xf86-video-amdgpu)
             ;;
         debian)
             # firmware-amd-graphics is strictly required on Debian for AMD GPUs

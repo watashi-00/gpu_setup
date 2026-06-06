@@ -103,4 +103,36 @@ verify_and_rollback() {
     return 1
 }
 
+# Check and optionally enable multilib repository on Arch Linux.
+ensure_arch_multilib() {
+    if [ "${FAMILY:-}" != "arch" ]; then
+        return 0
+    fi
+
+    if grep -q "^\[multilib\]" /etc/pacman.conf; then
+        return 0
+    fi
+
+    fecho "WARN" "The [multilib] repository is not enabled in /etc/pacman.conf."
+    fecho "WARN" "This is required to install 32-bit drivers and compatibility libraries."
+    
+    local enable_multilib=0
+    read -r -p "  Do you want to enable [multilib] now? (y/n): " em
+    if [[ "$em" =~ ^[Yy]$ ]]; then
+        fecho "INFO" "Enabling [multilib] in /etc/pacman.conf..."
+        # Uncomment the multilib section and the immediately following Include line
+        sed -i '/^#\[multilib\]/{ s/^#//; n; s/^#//; }' /etc/pacman.conf
+        
+        fecho "INFO" "Synchronizing package databases (pacman -Sy)..."
+        pacman -Sy
+    fi
+    
+    if grep -q "^\[multilib\]" /etc/pacman.conf; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+
 

@@ -24,10 +24,7 @@ nvidia_install() {
     
     case "$FAMILY" in
         arch)
-            if ! grep -q "^\[multilib\]" /etc/pacman.conf; then
-                fecho "WARN" "The [multilib] repository is not enabled in /etc/pacman.conf."
-                fecho "WARN" "32-bit libraries (lib32-*) might fail to install."
-            fi
+            ensure_arch_multilib || true
             local krel
             krel=$(uname -r)
             local hd="linux-headers"
@@ -36,7 +33,12 @@ nvidia_install() {
             elif [[ "$krel" == *"-zen"* ]]; then 
                 hd="linux-zen-headers"
             fi
-            packages=(nvidia-dkms nvidia-utils "$hd" lib32-nvidia-utils opencl-nvidia)
+            if grep -q "^\[multilib\]" /etc/pacman.conf; then
+                packages=(nvidia-dkms nvidia-utils "$hd" lib32-nvidia-utils opencl-nvidia)
+            else
+                fecho "WARN" "[multilib] not enabled. Skipping 32-bit NVIDIA utilities (lib32-nvidia-utils)."
+                packages=(nvidia-dkms nvidia-utils "$hd" opencl-nvidia)
+            fi
             ;;
         debian)
             if [[ "$OS_ID" == "ubuntu" ]] || [[ "$OS_LIKE" == *"ubuntu"* ]] || [[ "$OS_ID" == "zorin" ]] || [[ "$OS_ID" == "linuxmint" ]]; then

@@ -8,11 +8,13 @@ intel_install() {
     
     case "$FAMILY" in
         arch)
-            if ! grep -q "^\[multilib\]" /etc/pacman.conf; then
-                fecho "WARN" "The [multilib] repository is not enabled in /etc/pacman.conf."
-                fecho "WARN" "32-bit libraries (lib32-*) might fail to install."
+            ensure_arch_multilib || true
+            if grep -q "^\[multilib\]" /etc/pacman.conf; then
+                packages=(mesa lib32-mesa vulkan-intel lib32-vulkan-intel)
+            else
+                fecho "WARN" "[multilib] not enabled. Skipping 32-bit Intel libraries."
+                packages=(mesa vulkan-intel)
             fi
-            packages=(mesa lib32-mesa vulkan-intel lib32-vulkan-intel)
             ;;
         debian)
             packages=(libgl1-mesa-dri mesa-vulkan-drivers intel-media-va-driver firmware-misc-nonfree)

@@ -53,7 +53,7 @@ function get_system_status() {
             PKG_INSTALL_CMD=(dnf install -y)
         elif command -v pacman &>/dev/null; then
             FAMILY="arch"
-            PKG_UPDATE_CMD=(true) # Arch doesn't have a separate update command
+            PKG_UPDATE_CMD=(pacman -Sy)
             PKG_INSTALL_CMD=(pacman -S --noconfirm --needed)
         elif command -v zypper &>/dev/null; then
             FAMILY="suse"
